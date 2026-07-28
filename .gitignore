@@ -1,0 +1,10 @@
+.env
+backend/.venv/
+backend/sentinel_backend/ml/model_store/
+__pycache__/
+*.pyc
+collector/build/
+collector/bpf/*.o
+collector/src/*.skel.h
+node_modules/
+dist/
