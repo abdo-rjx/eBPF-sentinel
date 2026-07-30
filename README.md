@@ -1,12 +1,12 @@
 # 🛡️ eBPF Sentinel: Real-Time Behavioral Anomaly Detection System
 
-**eBPF Sentinel** (`sentinel`) is a lightweight, host-based intrusion and malware detection system (HIDS) built with **C / eBPF (libbpf + CO-RE)** and **Python Machine Learning (Isolation Forest)**. 
+**eBPF Sentinel** (`sentinel`) is a lightweight, host-based intrusion and malware detection system (HIDS) built with **C / eBPF (libbpf + CO-RE)** and **Python Machine Learning (Isolation Forest)**.
 
 Unlike traditional antivirus tools that rely on static signature databases (which fail against new or modified malware), Sentinel continuously monitors kernel-level process activity to learn what "normal" machine behavior looks like. It detects novel, zero-day security threats—such as ransomware file thrashing, command-and-control (C2) beaconing, and privilege escalation—by flagging statistical outliers in real time.
 
 ---
 
-## 💡 Why eBPF Sentinel? (The High-Level Concept)
+## 💡 Why eBPF Sentinel?
 
 ### The Core Problem
 Traditional security software inspects files on disk or listens in user space. This approach has two major drawbacks:
@@ -26,8 +26,6 @@ eBPF Sentinel:          "Why did a text editor just open 500 files and rename th
 ---
 
 ## 🏗️ System Architecture & Data Flow
-
-Sentinel is split into two main layers: a **Kernel Collector** running on the host for raw event capture, and a **Containerized Backend & Frontend** for data aggregation, ML scoring, and visualization.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -51,14 +49,17 @@ Sentinel is split into two main layers: a **Kernel Collector** running on the ho
 │ │ 1. Ingestion & Windowing: Groups events into 5-second per-process buckets    │ │
 │ │ 2. Feature Extraction: Calculates 10 behavioral metrics (rates, files, IPs) │ │
 │ │ 3. Machine Learning: Scores vectors using Isolation Forest (scikit-learn)   │ │
-│ │ 4. Storage & API: Saves to SQLite & broadcasts live alerts via FastAPI SSE  │ │
+│ │ 4. ML Explainability: Per-feature z-score analysis against baseline         │ │
+│ │ 5. Storage & API: Saves to SQLite & broadcasts live alerts via FastAPI SSE  │ │
 │ └─────────────────────────────────────────────────────────────────────────────┘ │
-│                     (Runs via Docker / Docker Compose)                          │
+│                (Runs via uvicorn — no Docker required)                          │
 └──────────────────────────────────────┬──────────────────────────────────────────┘
                                        │ Server-Sent Events (SSE) / REST API
 ┌──────────────────────────────────────▼──────────────────────────────────────────┐
 │                               REACT DASHBOARD                                   │
-│            Live Anomaly Timeline Chart ➔ Real-Time Process Threat Table         │
+│   Live Anomaly Timeline • Process Threat Table • AI Analysis Panel              │
+│   Simulation Guide • Per-Process Detail Drawer                                  │
+│   (Built-in demo mode — works without backend running)                          │
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -98,8 +99,11 @@ Each 5-second feature vector is evaluated by an **Isolation Forest** model (`sci
 * **Anomalous Behavior:** Outlier vectors (e.g., thousands of file renames in seconds, or dozens of rapid outbound socket connections) require very few partition splits to isolate, yielding a low decision score.
 * **Result:** Any window flagged as an outlier (`is_anomalous=True`) is flagged on the dashboard in red.
 
-### 5. Live Visualization (FastAPI + React Dashboard)
-Scored windows are stored in SQLite and broadcasted instantly to the React UI via **Server-Sent Events (SSE)**. Security analysts see a real-time graph of system anomaly scores and a table highlighting suspicious processes.
+### 5. ML Explainability (Feature Contribution Analysis)
+Each flagged window can be analyzed to understand **why** it was flagged. The `FeatureAnalyzer` compares each feature against a baseline (z-score) and surfaces the top contributors — so an analyst knows instantly whether the alert is about file renaming (ransomware), network beaconing (C2), or privilege escalation.
+
+### 6. Live Visualization (FastAPI + React Dashboard)
+Scored windows are stored in SQLite and broadcasted instantly to the React UI via **Server-Sent Events (SSE)**. Security analysts see a real-time graph of system anomaly scores, a table highlighting suspicious processes, and per-process detail drawers with full AI analysis.
 
 ---
 
@@ -120,7 +124,6 @@ Scored windows are stored in SQLite and broadcasted instantly to the React UI vi
 sentinel/
 ├── PLAN.md                          # Comprehensive technical design specification
 ├── README.md                        # Project documentation
-├── docker-compose.yml               # Orchestrates Python Backend & React Frontend
 ├── collector/                       # Kernel eBPF collector (C / libbpf)
 │   ├── bpf/
 │   │   ├── monitor.bpf.c            # Kernel space eBPF program (tracepoints)
@@ -131,17 +134,22 @@ sentinel/
 │   ├── Makefile                     # Build script for BPF & C binaries
 │   └── run.sh                       # Root launcher script
 ├── backend/                         # Python Analysis Pipeline & API
+│   ├── requirements.txt
 │   ├── sentinel_backend/
+│   │   ├── config.py                # Environment variable configuration
+│   │   ├── pipeline.py              # Wires ingestion → windowing → ML → DB → broadcast
 │   │   ├── ingestion/               # Socket client & dual-indexed 5s windowing
 │   │   ├── features/                # 10D feature vector builder
-│   │   ├── ml/                      # Isolation Forest training & inference module
+│   │   ├── ml/                      # Isolation Forest training, inference & explainability
 │   │   ├── db/                      # SQLite ORM schema & repositories
-│   │   └── api/                     # FastAPI endpoints (REST + SSE live stream)
+│   │   └── api/                     # FastAPI endpoints (REST + SSE live stream + auth)
 │   └── tests/                       # Unit and integration test suite
 ├── frontend/                        # React + Vite Web Dashboard
 │   └── src/
-│       ├── components/              # Live Anomaly Timeline & Process Table
-│       └── hooks/                   # SSE EventStream consumer
+│       ├── api/                     # REST API client
+│       ├── components/              # AnomalyTimeline, ProcessTable, AIAnalysisPanel,
+│       │                            # ProcessDetailDrawer, SimulationGuide
+│       └── hooks/                   # SSE EventStream consumer (with demo mode)
 └── test/                            # Safe Attack Simulation Scripts
     ├── simulate_ransomware.py       # Synthetic ransomware file-thrashing simulator
     └── simulate_beaconing.py        # Synthetic C2 beaconing simulator
@@ -152,80 +160,146 @@ sentinel/
 ## 🚀 Quick Start & Installation
 
 ### Prerequisites (Host Machine)
-* **OS:** Linux (Kernel $\ge 5.8$ with BTF enabled; tested on Fedora Linux).
+* **OS:** Linux (Kernel ≥ 5.8 with BTF enabled; tested on Fedora Linux).
 * **Toolchain:** `clang`, `llvm`, `libbpf-devel`, `bpftool`, `gcc`, `make`.
-* **Runtimes:** Python $\ge 3.11$, Node.js $\ge 18$, Docker & Docker Compose.
+* **Runtimes:** Python ≥ 3.11, Node.js ≥ 18.
 
-### Step 1: Install Dependencies & Prepare Kernel BTF
-On Fedora/RHEL-based systems:
+### Option A: Full Pipeline (with eBPF collector)
+
+#### Step 1: Install Dependencies
 ```bash
-sudo dnf install -y clang llvm libbpf-devel bpftool elfutils-libelf-devel kernel-devel make gcc python3.12 nodejs npm docker docker-compose
+sudo dnf install -y clang llvm libbpf-devel bpftool elfutils-libelf-devel \
+  kernel-devel make gcc python3.12 nodejs npm
 ```
-Generate the kernel BTF headers:
+
+#### Step 2: Generate Kernel BTF Headers
 ```bash
 sudo bpftool btf dump file /sys/kernel/btf/vmlinux format c > collector/bpf/vmlinux.h
 ```
 
-### Step 2: Build the eBPF Host Collector
+#### Step 3: Build the eBPF Host Collector
 ```bash
-cd collector
-make
+cd collector && make
 ```
 
-### Step 3: Set Up Python Backend & Train Model
+#### Step 4: Set Up Python Backend
 ```bash
 cd ../backend
-python3 -m venv .venv
-source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-
-# Create .env configuration
-cp ../.env.example ../.env
 ```
 
-To train the Isolation Forest model on your machine's baseline activity:
-1. Run the collector and save a baseline of normal activity to `baseline.csv` (or use the provided `baseline.csv`).
-2. Train the model:
+#### Step 5: Configure Environment
 ```bash
+cp .env.example .env
+# Edit .env and set a real API auth token:
+#   API_AUTH_TOKEN=$(openssl rand -hex 32)
+```
+All configurable environment variables:
+
+| Variable | Default | Description |
+|---|---|---|
+| `API_AUTH_TOKEN` | *(required)* | Bearer token for API authentication |
+| `SENTINEL_DB_PATH` | `/data/sentinel.db` | SQLite database path |
+| `SENTINEL_SOCKET_PATH` | `/tmp/sentinel_collector.sock` | Collector Unix socket path |
+| `SENTINEL_WINDOW_SECONDS` | `5` | Aggregation window duration |
+| `ISOLATION_FOREST_CONTAMINATION` | `0.02` | Expected proportion of outliers |
+| `VITE_API_BASE` (frontend) | `http://localhost:8000` | Backend API URL |
+| `VITE_API_TOKEN` (frontend) | *(same as API_AUTH_TOKEN)* | Auth token for frontend requests |
+
+#### Step 6: Train the ML Model
+```bash
+cd backend && source .venv/bin/activate
 python -m sentinel_backend.ml.train baseline.csv
 ```
 
-### Step 4: Run eBPF Sentinel
+#### Step 7: Run eBPF Sentinel
 
-1. **Start the Host Kernel Collector (Requires Root for eBPF):**
+1. **Start the Host Kernel Collector (requires root):**
 ```bash
-cd collector
-sudo ./run.sh
+cd collector && sudo ./run.sh
 ```
 
-2. **Start the Backend & Dashboard (In a new terminal):**
+2. **Start the Backend (new terminal):**
 ```bash
-docker-compose up --build
+cd backend && source .venv/bin/activate
+uvicorn sentinel_backend.api.main:app --reload
 ```
-Access the dashboard in your web browser at: **`http://localhost:5173`**  
-Access the API documentation at: **`http://localhost:8000/docs`**
+
+3. **Start the Frontend (new terminal):**
+```bash
+cd frontend && npm install && npm run dev
+```
+
+Access the dashboard at: **`http://localhost:5173`**
+Access the API docs at: **`http://localhost:8000/docs`**
+
+> All API endpoints (except `/health`) require the `Authorization: Bearer <API_AUTH_TOKEN>` header. The frontend automatically sends the token configured in `VITE_API_TOKEN`.
+
+### Option B: Frontend-Only Demo Mode (No Backend Needed)
+
+The frontend has a built-in **demo mode** that generates realistic mock data. Just run:
+
+```bash
+cd frontend && npm install && npm run dev
+```
+
+Open `http://localhost:5173` — you'll see "Demo Mode" in the connection status badge, and the dashboard will populate with simulated process activity (with ~20% random anomalies). No eBPF collector, no backend, no ML model required.
+
+This is great for evaluating the UI, testing, or demonstrating the dashboard without the full kernel setup.
+
+---
+
+## 📡 API Reference
+
+All endpoints (except `/health`) require a Bearer token:
+
+```bash
+curl -H "Authorization: Bearer $API_AUTH_TOKEN" http://localhost:8000/api/v1/windows
+```
+
+| Endpoint | Method | Description |
+|---|---|---|
+| `/health` | GET | Health check (no auth required) |
+| `/api/v1/windows` | GET | List windows (params: `limit`, `pid`, `anomalous_only`) |
+| `/api/v1/windows/{id}` | GET | Get single window details |
+| `/api/v1/windows/{id}/analysis` | GET | ML explainability analysis (per-feature z-scores) |
+| `/api/v1/processes` | GET | Aggregated process summary (window/anomaly counts) |
+| `/api/v1/stream` | GET | SSE live event stream |
 
 ---
 
 ## 🧪 Simulating Attacks & Verification
 
-Sentinel includes safe, self-contained test scripts to simulate malware behaviors without modifying real user files or creating external network traffic.
+Sentinel includes safe, self-contained test scripts to simulate malware behaviors.
 
 ### 1. Simulate Ransomware (File Thrashing)
-Run the synthetic ransomware script:
 ```bash
 python test/simulate_ransomware.py
 ```
-* **What it does:** Creates 500 temporary files, rapidly renames them all to `.locked`, and deletes them inside a temporary isolated folder.
-* **Expected Result:** The process triggers a sudden spike in `num_file_renames` and `num_file_deletes`, flagging an immediate **red anomaly** on the live dashboard.
+Creates 500 temp files, renames them all to `.locked`, then deletes them — all inside an isolated temp folder.
 
 ### 2. Simulate C2 Beaconing (Network Anomaly)
-Run the synthetic network beaconing script:
 ```bash
 python test/simulate_beaconing.py
 ```
-* **What it does:** Rapidly attempts socket connections to loopback addresses.
-* **Expected Result:** Triggers a spike in `num_connect` and `num_distinct_dest_ips`, raising an anomaly alert.
+Rapidly attempts socket connections to loopback addresses (no real outbound traffic).
+
+---
+
+## 🖥️ Dashboard Features
+
+| Feature | Description |
+|---|---|
+| **Threat Level Indicator** | NOMINAL / THREAT status with animated pulse |
+| **Stat Cards** | Live counts: processes, anomalies, syscall density |
+| **Anomaly Timeline** | Recharts area chart with anomaly score trend, threat threshold, and interactive tooltips |
+| **Process Table** | Consolidated by process name, searchable, filterable, with CRITICAL/SUSPICIOUS/BENIGN severity badges |
+| **AI Analysis Panel** | Per-window ML explainability: top anomaly contributors, z-scores, feature vectors |
+| **Process Detail Drawer** | Slide-out panel with behavioral vector and AI analysis tabs |
+| **Simulation Guide** | In-dashboard command reference with copy-to-clipboard for attack simulators |
+| **Connection Status** | Live/Reconnecting/Demo Mode indicator |
+| **Demo Mode** | Full dashboard experience without any backend running |
 
 ---
 
@@ -233,8 +307,19 @@ python test/simulate_beaconing.py
 
 * **Libbpf + CO-RE over BCC:** Avoids heavy LLVM runtime compilation overhead on the host. The eBPF binary is compiled once and adapts to any kernel using BTF relocations.
 * **IPC Isolation:** The C collector and Python analysis engine communicate over a Unix Domain Socket using NDJSON, preserving strict process boundary separation.
-* **Thread-Safe Dual-Indexed Windowing:** Process windows track parent-child relationships across asynchronous syscall boundaries without requiring full process tree tracking.
+* **Thread-Safe Dual-Indexed Windowing:** Process windows track parent-child relationships across asynchronous syscall boundaries via a secondary `ppid→children` index (children fan-out is only observable from the child's events, not the parent's).
+* **ML Explainability:** Beyond raw anomaly scores, per-feature z-score analysis explains *why* a window was flagged.
 * **Resilient Ingestion:** Socket disconnects or malformed lines are gracefully logged and recovered without crashing long-running daemon processes.
+* **Bearer Token Auth:** Every API request (except `/health`) requires authentication — fails closed, not open.
+
+---
+
+## 🧪 Running Tests
+
+```bash
+cd backend && source .venv/bin/activate
+pytest tests/ -v
+```
 
 ---
 

@@ -6,6 +6,7 @@ from .ingestion.windowing import WindowAggregator
 from .ml.inference import AnomalyScorer
 from .db.session import init_db, get_session as SessionLocal
 from .db.repository import insert_window
+from .db.retention import start_retention_loop
 from .api.routes_stream import broadcast_window
 from .features.vector import FeatureVector
 
@@ -18,6 +19,7 @@ def run_pipeline():
                                 "sentinel_backend/ml/model_store/isolation_forest.joblib")
 
     init_db()
+    start_retention_loop(retention_hours=24, interval_hours=1)
 
     scorer = AnomalyScorer(model_path)
 

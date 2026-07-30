@@ -31,3 +31,18 @@ def test_stream_no_auth():
 def test_invalid_token():
     resp = client.get("/api/v1/windows", headers={"Authorization": "Bearer wrong-token"})
     assert resp.status_code == 401
+
+def test_processes_with_auth():
+    resp = client.get("/api/v1/processes", headers={"Authorization": "Bearer test-token-12345"})
+    assert resp.status_code == 200
+    assert isinstance(resp.json(), list)
+
+def test_stats_with_auth():
+    resp = client.get("/api/v1/stats", headers={"Authorization": "Bearer test-token-12345"})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "total_windows" in data
+    assert "anomaly_count" in data
+    assert "unique_processes" in data
+    assert "avg_syscall_rate" in data
+    assert "anomaly_rate_pct" in data

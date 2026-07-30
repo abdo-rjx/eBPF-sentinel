@@ -6,8 +6,18 @@ from .schemas import WindowOut
 from ..db.session import get_session as SessionLocal
 from ..db.repository import query_windows
 from ..db.schema import WindowRecord
+from ..ml.explain import FeatureAnalyzer
 
 router = APIRouter(prefix="/api/v1", tags=["windows"], dependencies=[Depends(verify_token)])
+
+_analyzer: FeatureAnalyzer | None = None
+
+def get_analyzer() -> FeatureAnalyzer:
+    global _analyzer
+    if _analyzer is None:
+        baseline = "baseline.csv"
+        _analyzer = FeatureAnalyzer(baseline_path=baseline)
+    return _analyzer
 
 def get_db():
     db = SessionLocal()
@@ -30,3 +40,11 @@ def get_window(window_id: int, db: Session = Depends(get_db)):
     if not record:
         raise HTTPException(status_code=404, detail="Window not found")
     return record
+
+@router.get("/windows/{window_id}/analysis")
+def analyze_window(window_id: int, db: Session = Depends(get_db), analyzer: FeatureAnalyzer = Depends(get_analyzer)):
+    from fastapi import HTTPException
+    record = db.query(WindowRecord).filter(WindowRecord.id == window_id).first()
+    if not record:
+        raise HTTPException(status_code=404, detail="Window not found")
+    return analyzer.analyze(record)

@@ -1,21 +1,19 @@
 import { useEffect, useRef, useState } from 'react';
 
-// Fallback mock telemetry generator for live demo preview when backend is not actively running
+function pickComm(isAnomaly) {
+  const normal = ['bash', 'node', 'chrome', 'python3', 'systemd', 'dockerd', 'clang', 'git', 'sshd', 'nginx', 'postgres', 'redis'];
+  const bad = ['simulate_ransomware', 'c2_beacon_exec', 'evil_payload', 'nc_shell', 'miner', 'keylogger'];
+  return (isAnomaly ? bad : normal)[Math.floor(Math.random() * (isAnomaly ? bad : normal).length)];
+}
+
 function generateMockWindow(id, isAnomaly = false) {
-  const comms = isAnomaly 
-    ? ['simulate_ransomware', 'c2_beacon_exec', 'evil_payload', 'nc_shell'] 
-    : ['bash', 'node', 'chrome', 'python3', 'systemd', 'dockerd', 'clang', 'git'];
-  const comm = comms[Math.floor(Math.random() * comms.length)];
+  const comm = pickComm(isAnomaly);
   const pid = Math.floor(1000 + Math.random() * 25000);
   const now = Date.now() * 1e6;
-
   return {
-    id: id || Math.floor(Math.random() * 100000),
-    pid: pid,
-    ppid: Math.floor(100 + Math.random() * 900),
-    comm: comm,
-    window_start_ns: now - 5000 * 1e6,
-    window_end_ns: now,
+    id: id || Math.floor(Math.random() * 100000), pid,
+    ppid: Math.floor(100 + Math.random() * 900), comm,
+    window_start_ns: now - 5000 * 1e6, window_end_ns: now,
     num_execve: isAnomaly ? Math.floor(15 + Math.random() * 30) : Math.floor(Math.random() * 3),
     num_distinct_children: isAnomaly ? Math.floor(5 + Math.random() * 15) : Math.floor(Math.random() * 2),
     num_file_opens: isAnomaly ? Math.floor(400 + Math.random() * 600) : Math.floor(2 + Math.random() * 20),
@@ -27,40 +25,77 @@ function generateMockWindow(id, isAnomaly = false) {
     num_setuid: isAnomaly ? Math.floor(1 + Math.random() * 4) : 0,
     syscall_rate: isAnomaly ? parseFloat((200 + Math.random() * 500).toFixed(1)) : parseFloat((1 + Math.random() * 15).toFixed(1)),
     anomaly_score: isAnomaly ? parseFloat((-0.12 - Math.random() * 0.25).toFixed(4)) : parseFloat((0.05 + Math.random() * 0.2).toFixed(4)),
-    is_anomalous: isAnomaly,
-    created_at: new Date().toISOString()
+    is_anomalous: isAnomaly, created_at: new Date().toISOString(),
+  };
+}
+
+function buildProcessList(wins) {
+  const map = new Map();
+  for (const w of wins) {
+    const curr = map.get(w.pid);
+    if (!curr || curr.id < w.id) map.set(w.pid, { ...w });
+  }
+  return Array.from(map.values()).sort((a, b) => b.id - a.id);
+}
+
+function computeStats(wins, pList) {
+  const anomalyProcs = pList.filter(p => p.is_anomalous);
+  const anomalyWindows = wins.filter(w => w.is_anomalous);
+  const scores = wins.map(w => w.anomaly_score);
+  const minScore = scores.length ? Math.min(...scores) : 0;
+  const avgRate = wins.length ? wins.reduce((acc, w) => acc + w.syscall_rate, 0) / wins.length : 0;
+  return {
+    totalCount: wins.length,
+    uniqueProcesses: pList.length,
+    anomalyCount: anomalyWindows.length,
+    anomalyProcesses: anomalyProcs.length,
+    maxAnomalyScore: minScore,
+    avgSyscallRate: Math.round(avgRate),
   };
 }
 
 export function useEventStream(url, token) {
   const [windows, setWindows] = useState([]);
-  const [connectionState, setConnectionState] = useState('connecting'); // 'connected' | 'reconnecting' | 'demo_mode'
+  const [processes, setProcesses] = useState([]);
+  const [newProcesses, setNewProcesses] = useState(new Set());
+  const [connectionState, setConnectionState] = useState('connecting');
   const [stats, setStats] = useState({
-    totalCount: 0,
-    anomalyCount: 0,
-    maxAnomalyScore: 0,
-    avgSyscallRate: 0
+    totalCount: 0, uniqueProcesses: 0, anomalyCount: 0,
+    anomalyProcesses: 0, maxAnomalyScore: 0, avgSyscallRate: 0,
   });
 
-  const esRef = useRef(null);
+  const knownPids = useRef(new Set());
+
+  useEffect(() => {
+    if (windows.length === 0) return;
+    const pList = buildProcessList(windows);
+
+    const unseen = pList.filter(p => !knownPids.current.has(p.pid));
+    for (const p of unseen) knownPids.current.add(p.pid);
+
+    setProcesses(pList);
+    setStats(computeStats(windows, pList));
+
+    if (unseen.length > 0) {
+      const pids = new Set(unseen.map(p => p.pid));
+      setNewProcesses(pids);
+      const timer = setTimeout(() => setNewProcesses(new Set()), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [windows]);
 
   useEffect(() => {
     let mockInterval = null;
 
     if (!url || url.includes('undefined')) {
-      console.warn('Backend URL missing or invalid. Falling back to Demo Telemetry Stream Mode.');
       setConnectionState('demo_mode');
-      
-      // Seed mock data
-      const initialMocks = Array.from({ length: 15 }, (_, i) => 
-        generateMockWindow(100 - i, i === 3 || i === 12)
-      );
-      setWindows(initialMocks);
+      const initial = Array.from({ length: 12 }, (_, i) => generateMockWindow(100 - i, i === 2 || i === 9));
+      setWindows(initial);
 
+      let counter = 101;
       mockInterval = setInterval(() => {
-        const isAnomaly = Math.random() < 0.2; // 20% chance of anomaly pulse
-        const newMock = generateMockWindow(Date.now(), isAnomaly);
-        setWindows((prev) => [newMock, ...prev].slice(0, 200));
+        const isAnomaly = Math.random() < 0.2;
+        setWindows(prev => [generateMockWindow(counter++, isAnomaly), ...prev].slice(0, 200));
       }, 3500);
 
       return () => clearInterval(mockInterval);
@@ -68,47 +103,20 @@ export function useEventStream(url, token) {
 
     const fullUrl = token ? `${url}?token=${encodeURIComponent(token)}` : url;
     const es = new EventSource(fullUrl);
-    esRef.current = es;
 
-    es.onopen = () => {
-      setConnectionState('connected');
-    };
-
+    es.onopen = () => setConnectionState('connected');
     es.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        setWindows((prev) => [data, ...prev].slice(0, 200));
+        setWindows(prev => [data, ...prev].slice(0, 200));
       } catch (err) {
         console.error('Failed to parse SSE payload:', err);
       }
     };
+    es.onerror = () => setConnectionState('reconnecting');
 
-    es.onerror = () => {
-      setConnectionState('reconnecting');
-    };
-
-    return () => {
-      es.close();
-      if (mockInterval) clearInterval(mockInterval);
-    };
+    return () => es.close();
   }, [url, token]);
 
-  // Recalculate runtime aggregated stats whenever windows update
-  useEffect(() => {
-    if (windows.length === 0) return;
-    
-    const anomalyCount = windows.filter(w => w.is_anomalous).length;
-    const scores = windows.map(w => w.anomaly_score);
-    const minScore = Math.min(...scores); // Most anomalous score (lowest value)
-    const avgRate = windows.reduce((acc, w) => acc + w.syscall_rate, 0) / windows.length;
-
-    setStats({
-      totalCount: windows.length,
-      anomalyCount: anomalyCount,
-      maxAnomalyScore: minScore,
-      avgSyscallRate: Math.round(avgRate)
-    });
-  }, [windows]);
-
-  return { windows, connectionState, stats, setWindows };
+  return { windows, processes, newProcesses, connectionState, stats, setWindows };
 }

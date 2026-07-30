@@ -1,8 +1,8 @@
 """V1: processes endpoint — returns aggregated process info from windows table."""
 from fastapi import APIRouter, Depends
 from typing import List
+from sqlalchemy import Integer, func
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 from .auth import verify_token
 from ..db.session import get_session as SessionLocal
 from ..db.schema import WindowRecord
@@ -22,7 +22,7 @@ def list_processes(db: Session = Depends(get_db)):
         WindowRecord.pid,
         WindowRecord.comm,
         func.count(WindowRecord.id).label("windows_count"),
-        func.sum(WindowRecord.is_anomalous.cast(1)).label("anomalies_count"),
+        func.sum(WindowRecord.is_anomalous.cast(Integer)).label("anomalies_count"),
     ).group_by(WindowRecord.pid, WindowRecord.comm).order_by(WindowRecord.pid).all()
 
     return [
