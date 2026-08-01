@@ -6,8 +6,14 @@ from .schema import Base
 _engine = None
 _SessionLocal = None
 
+
 def _get_db_path():
-    return os.environ.get("SENTINEL_DB_PATH", "/data/sentinel.db")
+    path = os.environ.get("SENTINEL_DB_PATH", "sentinel.db")
+    # Ensure parent directory exists for custom paths like /data/sentinel.db
+    parent = os.path.dirname(path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    return path
 
 def _ensure_initialized():
     global _engine, _SessionLocal
