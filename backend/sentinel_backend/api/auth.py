@@ -1,5 +1,5 @@
 import os
-from fastapi import Header, HTTPException, status
+from fastapi import Header, HTTPException, Query, status
 from typing import Optional
 
 def verify_token(authorization: Optional[str] = Header(None)):
@@ -12,4 +12,27 @@ def verify_token(authorization: Optional[str] = Header(None)):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing Bearer token")
     token = authorization.removeprefix("Bearer ")
     if token != expected:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+def verify_token_any(
+    authorization: Optional[str] = Header(None),
+    token: Optional[str] = Query(None),
+):
+    """Accept the token as either `Authorization: Bearer <t>` header or `?token=<t>` query param.
+
+    The frontend's native EventSource cannot set request headers, so the SSE
+    stream must also accept the token as a query parameter. Only the stream
+    router uses this; all other routers keep header-only auth.
+    """
+    expected = os.environ.get("API_AUTH_TOKEN")
+    if not expected:
+        raise RuntimeError("API_AUTH_TOKEN is not set — refusing to start with no auth configured")
+    provided = None
+    if authorization and authorization.startswith("Bearer "):
+        provided = authorization.removeprefix("Bearer ")
+    elif token:
+        provided = token
+    if not provided:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing token")
+    if provided != expected:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")

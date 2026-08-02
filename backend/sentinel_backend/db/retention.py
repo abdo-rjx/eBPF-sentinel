@@ -23,7 +23,11 @@ def prune_old_windows(retention_hours: int = 24) -> int:
     """Delete all window records older than `retention_hours`. Returns count deleted."""
     db = SessionLocal()
     try:
-        cutoff_ns = int((time.time() - retention_hours * 3600) * 1_000_000_000)
+        # window_start/end_ns come from the collector's bpf_ktime_get_ns(), which
+        # is CLOCK_MONOTONIC (time since boot), NOT epoch time. Comparing them
+        # against time.time() would make every row look "older than retention"
+        # and wipe the whole table. Use monotonic here to match the timestamps.
+        cutoff_ns = int((time.monotonic() - retention_hours * 3600) * 1_000_000_000)
         count = db.query(WindowRecord).filter(
             WindowRecord.window_end_ns < cutoff_ns
         ).count()

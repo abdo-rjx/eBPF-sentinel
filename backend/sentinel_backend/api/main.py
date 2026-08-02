@@ -1,13 +1,20 @@
+import threading
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from . import routes_windows, routes_processes, routes_stream, routes_stats
 from ..db.session import init_db
+from ..pipeline import run_pipeline
 
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
     init_db()
+    # run_pipeline() blocks forever; it must live in the SAME process as the
+    # SSE endpoints because routes_stream._subscribers is an in-process set.
+    # A daemon thread keeps the event loop free while the pipeline consumes
+    # the collector socket, scores windows, and broadcasts them to subscribers.
+    threading.Thread(target=run_pipeline, name="sentinel-pipeline", daemon=True).start()
     yield
 
 

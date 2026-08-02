@@ -2,9 +2,9 @@ import asyncio
 import json
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
-from .auth import verify_token
+from .auth import verify_token_any
 
-router = APIRouter(prefix="/api/v1", tags=["stream"], dependencies=[Depends(verify_token)])
+router = APIRouter(prefix="/api/v1", tags=["stream"], dependencies=[Depends(verify_token_any)])
 
 _subscribers: set[asyncio.Queue] = set()
 
