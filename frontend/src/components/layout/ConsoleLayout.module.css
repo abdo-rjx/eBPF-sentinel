@@ -1,0 +1,25 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main {
+  flex: 1;
+  padding-block: var(--space-5) var(--space-7);
+}
+
+.footer {
+  border-top: 1px solid var(--border);
+  padding-block: var(--space-3);
+  display: flex;
+  justify-content: center;
+}
+
+.print {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}

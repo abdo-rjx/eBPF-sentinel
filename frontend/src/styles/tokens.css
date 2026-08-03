@@ -1,0 +1,91 @@
+:root {
+  /* ── surfaces ─────────────────────────────────────────── */
+  --bg-0: #0b0e13;
+  --bg-1: #12161d;
+  --bg-2: #181d26;
+  --bg-3: #212833;
+
+  /* ── borders ──────────────────────────────────────────── */
+  --border: #262e3a;
+  --border-strong: #3a4556;
+
+  /* ── text ─────────────────────────────────────────────── */
+  --text: #e7eaee;
+  --text-muted: #9aa4b0;
+  --text-dim: #616b78;
+
+  /* ── brand ────────────────────────────────────────────── */
+  --accent: #2dd4bf;
+  --accent-strong: #5ce8d4;
+  --on-accent: #04110e;
+  --accent-tint: rgba(45, 212, 191, 0.1);
+
+  /* ── severity ─────────────────────────────────────────── */
+  --danger: #ff6b5e;
+  --danger-dim: #3a1a18;
+  --warning: #ffb224;
+  --warning-dim: #3a2f12;
+  --success: #2fc98a;
+  --success-dim: #133c2b;
+  --sev-critical: var(--danger);
+  --sev-suspicious: var(--warning);
+  --sev-benign: var(--success);
+
+  /* ── elevation (offset, no glow) ──────────────────────── */
+  --shadow-1:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-2:
+    0 10px 24px -12px rgba(0, 0, 0, 0.6),
+    0 2px 0 rgba(0, 0, 0, 0.4);
+  --shadow-3: 4px 4px 0 0 #05070b;
+  --shadow-danger: 4px 4px 0 0 rgba(255, 107, 94, 0.14);
+
+  /* ── radius ───────────────────────────────────────────── */
+  --radius-1: 2px;
+  --radius-2: 4px;
+  --radius-3: 6px;
+  --radius-4: 8px;
+  --radius-full: 999px;
+
+  /* ── spacing ──────────────────────────────────────────── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+
+  /* ── type scale ───────────────────────────────────────── */
+  --text-2xs: 11px;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 15px;
+  --text-lg: 18px;
+  --text-xl: 22px;
+  --text-2xl: 28px;
+  --text-3xl: 36px;
+  --text-4xl: 48px;
+  --text-hero: clamp(44px, 6vw, 72px);
+
+  /* ── fonts ────────────────────────────────────────────── */
+  --font-display: 'Bricolage Grotesque', 'Segoe UI', system-ui, sans-serif;
+  --font-sans: 'Instrument Sans', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'Martian Mono', ui-monospace, 'SFMono-Regular', monospace;
+
+  /* ── motion ───────────────────────────────────────────── */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.33, 1, 0.68, 1);
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 450ms;
+
+  /* ── layout ───────────────────────────────────────────── */
+  --container: 1200px;
+  --container-wide: 1440px;
+  --header-height: 64px;
+}

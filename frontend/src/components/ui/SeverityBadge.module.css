@@ -1,0 +1,38 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid;
+  background: transparent;
+  white-space: nowrap;
+}
+
+.badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+.critical {
+  color: var(--danger);
+  border-color: var(--danger-dim);
+}
+
+.suspicious {
+  color: var(--warning);
+  border-color: var(--warning-dim);
+}
+
+.benign {
+  color: var(--success);
+  border-color: var(--success-dim);
+}

@@ -1,0 +1,26 @@
+.skeleton {
+  display: block;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+}
+
+.page {
+  padding: var(--space-5);
+  display: grid;
+  gap: var(--space-5);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-4);
+}
+
+.badge {
+  height: 88px;
+}
+
+.block {
+  height: 240px;
+}

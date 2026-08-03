@@ -1,0 +1,44 @@
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
+/* Static square glyph — deliberately not a pulsing dot. */
+.glyph {
+  width: 7px;
+  height: 7px;
+  border-radius: 1px;
+  background: currentColor;
+  flex: none;
+}
+
+.connected {
+  color: var(--success);
+  border-color: var(--success-dim);
+}
+
+.demo_mode {
+  color: var(--warning);
+  border-color: var(--warning-dim);
+}
+
+.reconnecting {
+  color: var(--danger);
+  border-color: var(--danger-dim);
+}
+
+.connecting {
+  color: var(--text-dim);
+  border-color: var(--border);
+}

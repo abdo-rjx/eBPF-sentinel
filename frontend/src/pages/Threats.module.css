@@ -1,0 +1,42 @@
+.legend {
+  margin-bottom: var(--space-6);
+}
+
+.legendRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  background: var(--bg-1);
+  padding: var(--space-3) var(--space-4);
+}
+
+.legendNote {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-dim);
+}
+
+@media (min-width: 720px) {
+  .legendNote {
+    flex-basis: auto;
+    margin-left: auto;
+  }
+}
+
+.sectionTitle {
+  margin: var(--space-7) 0 var(--space-4);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-lg);
+  color: var(--text);
+}
+
+.cards {
+  display: grid;
+  gap: var(--space-5);
+  margin-bottom: var(--space-7);
+}

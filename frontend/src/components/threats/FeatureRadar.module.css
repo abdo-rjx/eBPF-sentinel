@@ -1,0 +1,44 @@
+.svg {
+  width: 100%;
+  max-width: 220px;
+  height: auto;
+  display: block;
+}
+
+.axis {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.grid {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+}
+
+.data {
+  fill: currentColor;
+  opacity: 0.14;
+}
+
+.dataStroke {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+}
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 6.5px;
+  letter-spacing: 0.04em;
+  fill: var(--text-dim);
+}
+
+.critical {
+  color: var(--danger);
+}
+
+.suspicious {
+  color: var(--warning);
+}
