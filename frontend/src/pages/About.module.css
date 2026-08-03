@@ -1,0 +1,123 @@
+.narrative {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 72ch;
+  padding-bottom: var(--space-5);
+}
+
+.para {
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: 1.65;
+  color: var(--text-muted);
+}
+
+.sectionTitle {
+  margin: var(--space-7) 0 var(--space-4);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-lg);
+  color: var(--text);
+}
+
+.stack {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+@media (min-width: 720px) {
+  .stack {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 980px) {
+  .stack {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.stackCardWrap,
+.limitWrap {
+  min-width: 0;
+}
+
+.stackCard {
+  height: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  background: var(--bg-1);
+  padding: var(--space-5);
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+}
+
+.stackRole {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.stackName {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-lg);
+  color: var(--text);
+}
+
+.stackDetail {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.limits {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-4);
+}
+
+@media (min-width: 880px) {
+  .limits {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.limit {
+  height: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  background: var(--bg-1);
+  padding: var(--space-5);
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
+}
+
+.limitTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: var(--text-md);
+  color: var(--text);
+}
+
+.limitBody {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.links {
+  display: flex;
+  gap: var(--space-3);
+  margin: var(--space-7) 0 var(--space-8);
+}

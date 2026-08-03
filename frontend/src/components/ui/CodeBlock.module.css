@@ -1,0 +1,29 @@
+.block {
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  background: var(--bg-2);
+  overflow: hidden;
+}
+
+.title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-1);
+}
+
+.pre {
+  margin: 0;
+  padding: var(--space-4);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.7;
+  color: var(--text);
+  white-space: pre;
+}

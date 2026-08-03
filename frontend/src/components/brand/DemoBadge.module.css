@@ -1,0 +1,12 @@
+.badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--warning);
+  border: 1px dashed var(--warning-dim);
+  border-radius: var(--radius-1);
+  padding: 4px 8px;
+  white-space: nowrap;
+}

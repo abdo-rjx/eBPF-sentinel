@@ -1,0 +1,97 @@
+.panel {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2);
+  box-shadow: var(--shadow-3);
+  padding: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
+  aspect-ratio: 1 / 1.02;
+  max-width: 520px;
+  margin-inline: auto;
+  width: 100%;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.lede {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.danger {
+  color: var(--danger);
+}
+
+.svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  min-height: 0;
+}
+
+.ringOuter {
+  fill: none;
+  stroke: var(--border);
+}
+
+.ringDashed {
+  fill: none;
+  stroke: var(--border-strong);
+}
+
+.ringInner {
+  fill: none;
+  stroke: var(--accent);
+  opacity: 0.35;
+}
+
+.orbit {
+  fill: none;
+  stroke: var(--accent);
+  opacity: 0.7;
+}
+
+.node {
+  fill: var(--accent);
+}
+
+.needle {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.needleSoft {
+  stroke: var(--border-strong);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.core {
+  fill: var(--accent);
+}
+
+.dot {
+  fill: var(--text-dim);
+}
+
+.dotDanger {
+  fill: var(--danger);
+}
+
+.tick {
+  stroke: var(--border-strong);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
