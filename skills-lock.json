@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "ai-research-explore": {
+      "source": "lllllllama/rigorpilot-skills",
+      "sourceType": "github",
+      "skillPath": "skills/ai-research-explore/SKILL.md",
+      "computedHash": "7816168fcb2853a208fd0f7c95efea52e81a383f53d94318e43eb695199f6356"
+    },
+    "architecture-designer": {
+      "source": "jeffallan/claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/architecture-designer/SKILL.md",
+      "computedHash": "ecb729710037e01080fd2c342f37d2c25b3597bec70b8d529f9604abd8ccc142"
+    }
+  }
+}

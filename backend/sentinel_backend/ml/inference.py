@@ -1,11 +1,15 @@
-import joblib
 from dataclasses import dataclass
+
+import joblib
+
 from ..features.vector import FeatureVector
+
 
 @dataclass
 class AnomalyResult:
     anomaly_score: float
     is_anomalous: bool
+
 
 class AnomalyScorer:
     def __init__(self, model_path: str):

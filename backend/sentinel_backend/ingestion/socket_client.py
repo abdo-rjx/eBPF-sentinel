@@ -1,10 +1,12 @@
-import socket
 import json
 import logging
-from typing import Iterator
+import socket
+from collections.abc import Iterator
+
 from .models import RawEvent
 
 logger = logging.getLogger(__name__)
+
 
 def stream_events(socket_path: str) -> Iterator[RawEvent]:
     while True:
@@ -31,5 +33,6 @@ def stream_events(socket_path: str) -> Iterator[RawEvent]:
                         continue
         except (ConnectionRefusedError, FileNotFoundError):
             import time
+
             logger.info("Collector not available yet, retrying in 2s...")
             time.sleep(2)

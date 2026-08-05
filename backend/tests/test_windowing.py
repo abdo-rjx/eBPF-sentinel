@@ -1,7 +1,6 @@
-import pytest
-from sentinel_backend.ingestion.models import RawEvent, EventType
-from sentinel_backend.ingestion.windowing import WindowAggregator
 from sentinel_backend.features.vector import FeatureVector
+from sentinel_backend.ingestion.models import EventType, RawEvent
+from sentinel_backend.ingestion.windowing import WindowAggregator
 
 
 def test_single_pid_counts():
@@ -16,16 +15,58 @@ def test_single_pid_counts():
     ppid = 1
 
     events = [
-        RawEvent(ts=base_ts, pid=pid, tid=pid, ppid=ppid, uid=1000,
-                 comm="test", event_type=EventType.execve, filename="/bin/ls"),
-        RawEvent(ts=base_ts + 100_000_000, pid=pid, tid=pid, ppid=ppid, uid=1000,
-                 comm="test", event_type=EventType.openat, filename="/etc/passwd"),
-        RawEvent(ts=base_ts + 200_000_000, pid=pid, tid=pid, ppid=ppid, uid=1000,
-                 comm="test", event_type=EventType.openat, filename="/etc/shadow"),
-        RawEvent(ts=base_ts + 300_000_000, pid=pid, tid=pid, ppid=ppid, uid=1000,
-                 comm="test", event_type=EventType.connect, dst_ip=0x0100007F, dst_port=80),
-        RawEvent(ts=base_ts + 400_000_000, pid=pid, tid=pid, ppid=ppid, uid=1000,
-                 comm="test", event_type=EventType.connect, dst_ip=0x0100007F, dst_port=443),
+        RawEvent(
+            ts=base_ts,
+            pid=pid,
+            tid=pid,
+            ppid=ppid,
+            uid=1000,
+            comm="test",
+            event_type=EventType.execve,
+            filename="/bin/ls",
+        ),
+        RawEvent(
+            ts=base_ts + 100_000_000,
+            pid=pid,
+            tid=pid,
+            ppid=ppid,
+            uid=1000,
+            comm="test",
+            event_type=EventType.openat,
+            filename="/etc/passwd",
+        ),
+        RawEvent(
+            ts=base_ts + 200_000_000,
+            pid=pid,
+            tid=pid,
+            ppid=ppid,
+            uid=1000,
+            comm="test",
+            event_type=EventType.openat,
+            filename="/etc/shadow",
+        ),
+        RawEvent(
+            ts=base_ts + 300_000_000,
+            pid=pid,
+            tid=pid,
+            ppid=ppid,
+            uid=1000,
+            comm="test",
+            event_type=EventType.connect,
+            dst_ip=0x0100007F,
+            dst_port=80,
+        ),
+        RawEvent(
+            ts=base_ts + 400_000_000,
+            pid=pid,
+            tid=pid,
+            ppid=ppid,
+            uid=1000,
+            comm="test",
+            event_type=EventType.connect,
+            dst_ip=0x0100007F,
+            dst_port=443,
+        ),
     ]
 
     for e in events:
@@ -61,10 +102,30 @@ def test_children_fan_out():
     parent_pid = 200
     child_pid = 201
 
-    agg.ingest(RawEvent(ts=base_ts, pid=parent_pid, tid=parent_pid, ppid=1, uid=0,
-                        comm="parent", event_type=EventType.execve, filename="/bin/bash"))
-    agg.ingest(RawEvent(ts=base_ts + 50_000_000, pid=child_pid, tid=child_pid, ppid=parent_pid, uid=0,
-                        comm="child", event_type=EventType.execve, filename="/bin/ls"))
+    agg.ingest(
+        RawEvent(
+            ts=base_ts,
+            pid=parent_pid,
+            tid=parent_pid,
+            ppid=1,
+            uid=0,
+            comm="parent",
+            event_type=EventType.execve,
+            filename="/bin/bash",
+        )
+    )
+    agg.ingest(
+        RawEvent(
+            ts=base_ts + 50_000_000,
+            pid=child_pid,
+            tid=child_pid,
+            ppid=parent_pid,
+            uid=0,
+            comm="child",
+            event_type=EventType.execve,
+            filename="/bin/ls",
+        )
+    )
 
     agg._flush((parent_pid, base_ts))
 
@@ -83,12 +144,23 @@ def test_reaper_flushes_stale_window():
     agg = WindowAggregator(window_seconds=1, on_window_complete=on_complete)
     base_ts = 3_000_000_000_000
 
-    agg.ingest(RawEvent(ts=base_ts, pid=300, tid=300, ppid=1, uid=0,
-                        comm="reap_test", event_type=EventType.openat, filename="/tmp/x"))
+    agg.ingest(
+        RawEvent(
+            ts=base_ts,
+            pid=300,
+            tid=300,
+            ppid=1,
+            uid=0,
+            comm="reap_test",
+            event_type=EventType.openat,
+            filename="/tmp/x",
+        )
+    )
 
     agg.start()
 
     import time
+
     time.sleep(1.5)
 
     agg.stop()

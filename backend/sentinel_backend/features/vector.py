@@ -1,10 +1,18 @@
 from pydantic import BaseModel
 
 FEATURE_COLUMNS = [
-    "num_execve", "num_distinct_children", "num_file_opens",
-    "num_file_renames", "num_file_deletes", "num_distinct_files_touched",
-    "num_connect", "num_distinct_dest_ips", "num_setuid", "syscall_rate",
+    "num_execve",
+    "num_distinct_children",
+    "num_file_opens",
+    "num_file_renames",
+    "num_file_deletes",
+    "num_distinct_files_touched",
+    "num_connect",
+    "num_distinct_dest_ips",
+    "num_setuid",
+    "syscall_rate",
 ]
+
 
 class FeatureVector(BaseModel):
     pid: int

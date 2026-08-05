@@ -1,6 +1,7 @@
-from pydantic import BaseModel
-from typing import Optional
 from enum import Enum
+
+from pydantic import BaseModel
+
 
 class EventType(str, Enum):
     execve = "execve"
@@ -11,6 +12,7 @@ class EventType(str, Enum):
     rename = "rename"
     setuid = "setuid"
 
+
 class RawEvent(BaseModel):
     ts: int
     pid: int
@@ -19,7 +21,7 @@ class RawEvent(BaseModel):
     uid: int
     comm: str
     event_type: EventType
-    filename: Optional[str] = ""
-    dst_ip: Optional[int] = 0
-    dst_port: Optional[int] = 0
-    target_uid: Optional[int] = 0
+    filename: str | None = ""
+    dst_ip: int | None = 0
+    dst_port: int | None = 0
+    target_uid: int | None = 0

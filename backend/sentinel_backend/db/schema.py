@@ -1,7 +1,17 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, BigInteger, DateTime, func
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    Integer,
+    String,
+    func,
+)
 from sqlalchemy.orm import declarative_base
 
 Base = declarative_base()
+
 
 class WindowRecord(Base):
     __tablename__ = "windows"

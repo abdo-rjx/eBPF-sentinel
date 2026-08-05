@@ -9,12 +9,15 @@ Usage:
     # Background loop (call from pipeline.py):
     start_retention_loop(retention_hours=24, interval_hours=1)
 """
+
 import logging
 import threading
 import time
+
 from sqlalchemy import delete
-from .session import get_session as SessionLocal
+
 from .schema import WindowRecord
+from .session import get_session as SessionLocal
 
 logger = logging.getLogger(__name__)
 
@@ -28,14 +31,14 @@ def prune_old_windows(retention_hours: int = 24) -> int:
         # against time.time() would make every row look "older than retention"
         # and wipe the whole table. Use monotonic here to match the timestamps.
         cutoff_ns = int((time.monotonic() - retention_hours * 3600) * 1_000_000_000)
-        count = db.query(WindowRecord).filter(
-            WindowRecord.window_end_ns < cutoff_ns
-        ).count()
+        count = (
+            db.query(WindowRecord)
+            .filter(WindowRecord.window_end_ns < cutoff_ns)
+            .count()
+        )
         if count > 0:
             db.execute(
-                delete(WindowRecord).where(
-                    WindowRecord.window_end_ns < cutoff_ns
-                )
+                delete(WindowRecord).where(WindowRecord.window_end_ns < cutoff_ns)
             )
             db.commit()
             logger.info("Pruned %d old window records (>%dh)", count, retention_hours)
@@ -48,7 +51,7 @@ def _retention_loop(retention_hours: int, interval_hours: int, stop):
     while not stop.is_set():
         try:
             prune_old_windows(retention_hours=retention_hours)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001 - daemon loop must never die on a transient DB error
             logger.warning("Retention prune failed: %s", exc)
         stop.wait(timeout=interval_hours * 3600)
 

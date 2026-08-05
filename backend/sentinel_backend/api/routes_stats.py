@@ -1,12 +1,16 @@
 """Aggregated statistics endpoint for the dashboard overview."""
-from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
-from sqlalchemy import func
-from .auth import verify_token
-from ..db.session import get_session as SessionLocal
-from ..db.schema import WindowRecord
 
-router = APIRouter(prefix="/api/v1", tags=["stats"], dependencies=[Depends(verify_token)])
+from fastapi import APIRouter, Depends
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+
+from ..db.schema import WindowRecord
+from ..db.session import get_session as SessionLocal
+from .auth import verify_token
+
+router = APIRouter(
+    prefix="/api/v1", tags=["stats"], dependencies=[Depends(verify_token)]
+)
 
 
 def get_db():
@@ -20,24 +24,24 @@ def get_db():
 @router.get("/stats")
 def get_stats(db: Session = Depends(get_db)):
     total = db.query(func.count(WindowRecord.id)).scalar() or 0
-    anomaly_count = db.query(func.count(WindowRecord.id)).filter(
-        WindowRecord.is_anomalous.is_(True)
-    ).scalar() or 0
+    anomaly_count = (
+        db.query(func.count(WindowRecord.id))
+        .filter(WindowRecord.is_anomalous.is_(True))
+        .scalar()
+        or 0
+    )
 
     unique_processes = (
-        db.query(func.count(func.distinct(WindowRecord.pid)))
-        .scalar() or 0
+        db.query(func.count(func.distinct(WindowRecord.pid))).scalar() or 0
     )
     anomaly_processes = (
         db.query(func.count(func.distinct(WindowRecord.pid)))
         .filter(WindowRecord.is_anomalous.is_(True))
-        .scalar() or 0
+        .scalar()
+        or 0
     )
 
-    avg_rate = (
-        db.query(func.avg(WindowRecord.syscall_rate))
-        .scalar() or 0.0
-    )
+    avg_rate = db.query(func.avg(WindowRecord.syscall_rate)).scalar() or 0.0
 
     top_anomalies = (
         db.query(

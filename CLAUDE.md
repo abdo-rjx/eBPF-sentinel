@@ -47,6 +47,10 @@ cd frontend && npm install && npm run dev               # http://localhost:5173
 # Synthetic attack simulators (run while the pipeline is up to produce visible anomalies)
 python test/simulate_ransomware.py
 python test/simulate_beaconing.py
+
+# Offline end-to-end detection check (scores the simulator vectors against the
+# trained model + policy; no collector/root needed) — run from repo root
+backend/.venv/bin/python test/verify_detection.py
 ```
 
 Notes:
@@ -77,9 +81,10 @@ A background reaper thread (`_reap_loop`) flushes windows that went quiet, so a 
 
 ### ML (`ml/`)
 
-- `ml/train.py` — offline training entrypoint; fits `IsolationForest(n_estimators=100, contamination=0.02)` on a baseline CSV and dumps a joblib.
+- `ml/train.py` — offline training entrypoint; fits `IsolationForest(n_estimators=100)` on a baseline CSV and dumps a joblib. `contamination` defaults to `ISOLATION_FOREST_CONTAMINATION` (env, default 0.02); the CLI writes to `SENTINEL_MODEL_PATH` unless an output path is given.
 - `ml/inference.py` — `AnomalyScorer` loads the joblib once and scores vectors. **sklearn sign convention: `decision_function()` is negative for anomalies, positive for normal; `predict() == -1` means anomalous.** Do not flip this — it silently inverts every alert in the dashboard.
-- `ml/explain.py` — `FeatureAnalyzer` computes per-feature z-scores against `baseline.csv` (loaded lazily by `routes_windows.py`, resolved relative to CWD) to explain *why* a window was flagged.
+- `ml/detection_policy.py` — post-model rules run by `pipeline.score_window()`: a static `SYSTEM_DAEMONS` allowlist suppresses OS-kernel daemons (udevd hotplug bursts of renames/deletes), and a beaconing rule (`num_connect >= 20` with `<= 2` distinct IPs) promotes single-destination connect bursts that the count-aggregate features can't express. It mutates `AnomalyResult.is_anomalous` in place; `anomaly_score` is preserved.
+- `ml/explain.py` — `FeatureAnalyzer` computes per-feature z-scores against `baseline.csv` (loaded lazily by `routes_windows.py`, resolved relative to the package root so it works from any CWD) to explain *why* a window was flagged.
 
 ### DB (`db/`)
 
@@ -89,19 +94,19 @@ A background reaper thread (`_reap_loop`) flushes windows that went quiet, so a 
 
 ### API (`api/`)
 
-- `main.py` mounts the routers and `init_db()` in a lifespan hook. **It does not start the ingestion pipeline.**
-- Auth: `api/auth.py:verify_token` requires `Authorization: Bearer <API_AUTH_TOKEN>` on every route except `/health`; fails closed (raises if the env var is unset). `API_AUTH_TOKEN` must be set in the environment or all authed requests 500.
+- `main.py` mounts the routers, calls `init_db()` in a lifespan hook, and starts `run_pipeline()` in a daemon thread (see Pipeline wiring).
+- Auth: `api/auth.py:verify_token` requires `Authorization: Bearer <API_AUTH_TOKEN>` on every route except `/health`; `/api/v1/stream` uses `verify_token_any`, which also accepts `?token=`. Both fail closed (raise if the env var is unset) — `API_AUTH_TOKEN` must be set or all authed requests 500.
 - `routes_stream.py` keeps an in-process `_subscribers` set of asyncio queues; `pipeline.py` calls `broadcast_window()` after every DB insert. The 15s `: keepalive\n\n` comment line is load-bearing (prevents proxy idle disconnects) — don't remove it.
 
 ### Pipeline wiring (`pipeline.py`)
 
-`run_pipeline()` is the only place that connects ingestion → windowing → ML → DB → SSE broadcast. It is **currently not called from anywhere** — `main.py` only serves the API. To run the full live pipeline the app needs an entrypoint that calls `run_pipeline()` (it blocks forever, consuming `stream_events()`), separate from the uvicorn process.
+`run_pipeline()` is the only place that connects ingestion → windowing → ML → detection policy → DB → SSE broadcast. It blocks forever consuming `stream_events()`, so `api/main.py` starts it in a daemon thread inside the FastAPI lifespan (`threading.Thread(target=run_pipeline, daemon=True)`) — the same process as the SSE endpoints, because `routes_stream._subscribers` is an in-process set. Each completed window is handled by `score_window()`: `AnomalyScorer.score()` then `apply_detection_policy()` (allowlist + beaconing), then inserted into the DB and broadcast.
 
 ## Known gaps / things to verify before trusting
 
-- **SSE auth mismatch**: the frontend's `useEventStream` passes the token as a query param (`?token=…`) because native `EventSource` cannot set the `Authorization` header, but the backend SSE endpoint only checks the header via `verify_token`. Against a real backend the SSE stream gets 401'd and the dashboard sits in "Reconnecting" — the demo mode never hits this because it doesn't connect at all. Fixing this requires the backend to also accept the query-param token for `/api/v1/stream` specifically.
-- **Duplicate explainability logic**: the frontend `AIAnalysisPanel` computes z-scores client-side against a **hardcoded `BASELINE`** rather than calling `/api/v1/windows/{id}/analysis` (which uses the real `baseline.csv`). The two drift independently.
-- **`SENTINEL_MODEL_PATH`**: `pipeline.py` reads this env var directly, but `config.py` does not define it — keep them consistent if you add more env vars.
+- **SSE auth**: `/api/v1/stream` accepts the token as a query param too (`verify_token_any` in `api/auth.py`; `frontend/src/lib/config.ts:streamUrl()` appends `?token=`), because native `EventSource` can't set headers. All other routes are header-only.
+- **Explainability fallback**: `pages/Dashboard.tsx` calls the real `/api/v1/windows/{id}/analysis`; if the API is unreachable it falls back to a client-side deviation-vs-median calc labeled "Live analysis unavailable". The fallback is approximate, not the model's baseline z-scores — they can drift.
+- **`SENTINEL_MODEL_PATH`**: defined in `config.py` (default `backend/sentinel_backend/ml/model_store/isolation_forest.joblib`); both `train.py` (CLI) and `pipeline.py` use it, so training and scoring stay consistent.
 
 ## Config & env
 

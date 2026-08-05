@@ -1,10 +1,9 @@
 import os
-import math
-import json
+
 import pandas as pd
-import numpy as np
-from ..features.vector import FEATURE_COLUMNS
+
 from ..db.schema import WindowRecord
+from ..features.vector import FEATURE_COLUMNS
 
 _FEATURE_LABELS = {
     "num_execve": "Process Executions",
@@ -18,6 +17,7 @@ _FEATURE_LABELS = {
     "num_setuid": "Setuid Attempts",
     "syscall_rate": "Syscall Density",
 }
+
 
 class FeatureAnalyzer:
     def __init__(self, baseline_path: str | None = None):
@@ -36,15 +36,21 @@ class FeatureAnalyzer:
             mean = self.means.get(col, 0.0)
             std = self.stds.get(col, 1.0)
             z = (value - mean) / std if std > 0 else 0.0
-            contributions.append({
-                "feature": col,
-                "label": _FEATURE_LABELS.get(col, col),
-                "value": value,
-                "baseline_mean": round(mean, 2),
-                "baseline_std": round(std, 2),
-                "z_score": round(z, 3),
-                "severity": "high" if abs(z) > 3 else "medium" if abs(z) > 1.5 else "low",
-            })
+            contributions.append(
+                {
+                    "feature": col,
+                    "label": _FEATURE_LABELS.get(col, col),
+                    "value": value,
+                    "baseline_mean": round(mean, 2),
+                    "baseline_std": round(std, 2),
+                    "z_score": round(z, 3),
+                    "severity": "high"
+                    if abs(z) > 3
+                    else "medium"
+                    if abs(z) > 1.5
+                    else "low",
+                }
+            )
 
         contributions.sort(key=lambda c: abs(c["z_score"]), reverse=True)
 
@@ -60,10 +66,15 @@ class FeatureAnalyzer:
             "summary": self._generate_summary(record, contributions, top_contributors),
         }
 
-    def _generate_summary(self, record: WindowRecord, contributions: list, top: list) -> str:
+    def _generate_summary(
+        self, record: WindowRecord, contributions: list, top: list
+    ) -> str:
         if not record.is_anomalous:
             return "No anomalous behavior detected. Process behavior is within normal statistical bounds."
         if not top:
             return "Slight statistical deviation detected but no single feature exceeds alert thresholds."
         top_features = [c["label"] for c in top[:3]]
-        return f"Anomaly detected: {len(top)} behavioral signals deviating from baseline. "
+        return (
+            f"Anomaly detected: {len(top)} behavioral signals deviating from baseline. "
+            f"Most significant: {', '.join(top_features)}."
+        )

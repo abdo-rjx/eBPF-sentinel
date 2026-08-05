@@ -1,0 +1,13 @@
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's dependency-injection callables are idiomatic in argument defaults
+# (e.g. `db: Session = Depends(get_db)`). Ruff's B008 otherwise flags them.
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.Query",
+    "fastapi.Header",
+    "fastapi.Path",
+    "fastapi.Body",
+    "fastapi.Cookie",
+    "fastapi.Form",
+    "fastapi.File",
+]

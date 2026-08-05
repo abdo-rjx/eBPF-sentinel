@@ -1,5 +1,6 @@
 .env
 backend/.venv/
+backend/sentinel.db*
 backend/sentinel_backend/ml/model_store/
 __pycache__/
 *.pyc

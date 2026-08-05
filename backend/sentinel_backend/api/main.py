@@ -1,10 +1,12 @@
 import threading
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from . import routes_windows, routes_processes, routes_stream, routes_stats
+
 from ..db.session import init_db
 from ..pipeline import run_pipeline
+from . import routes_processes, routes_stats, routes_stream, routes_windows
 
 
 @asynccontextmanager

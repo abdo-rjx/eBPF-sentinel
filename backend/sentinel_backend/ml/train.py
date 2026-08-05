@@ -1,11 +1,18 @@
 """Offline training entrypoint. Run as: python -m sentinel_backend.ml.train baseline.csv"""
+
 import sys
+
 import joblib
 import pandas as pd
 from sklearn.ensemble import IsolationForest
+
+from ..config import ISOLATION_FOREST_CONTAMINATION, SENTINEL_MODEL_PATH
 from ..features.vector import FEATURE_COLUMNS
 
-def train(csv_path: str, output_path: str, contamination: float = 0.02):
+
+def train(csv_path: str, output_path: str, contamination: float | None = None):
+    if contamination is None:
+        contamination = ISOLATION_FOREST_CONTAMINATION
     df = pd.read_csv(csv_path)
     missing = set(FEATURE_COLUMNS) - set(df.columns)
     if missing:
@@ -22,10 +29,13 @@ def train(csv_path: str, output_path: str, contamination: float = 0.02):
     joblib.dump(model, output_path)
     print(f"Trained on {len(df)} windows, saved to {output_path}")
 
+
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Usage: python -m sentinel_backend.ml.train <baseline.csv> [output.joblib]")
+        print(
+            "Usage: python -m sentinel_backend.ml.train <baseline.csv> [output.joblib]"
+        )
         sys.exit(1)
     csv_path = sys.argv[1]
-    output_path = sys.argv[2] if len(sys.argv) > 2 else "sentinel_backend/ml/model_store/isolation_forest.joblib"
+    output_path = sys.argv[2] if len(sys.argv) > 2 else SENTINEL_MODEL_PATH
     train(csv_path, output_path)

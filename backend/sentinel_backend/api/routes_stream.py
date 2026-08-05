@@ -1,17 +1,23 @@
 import asyncio
 import json
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
+
 from .auth import verify_token_any
 
-router = APIRouter(prefix="/api/v1", tags=["stream"], dependencies=[Depends(verify_token_any)])
+router = APIRouter(
+    prefix="/api/v1", tags=["stream"], dependencies=[Depends(verify_token_any)]
+)
 
 _subscribers: set[asyncio.Queue] = set()
+
 
 def broadcast_window(window_dict: dict):
     payload = json.dumps(window_dict, default=str)
     for q in list(_subscribers):
         q.put_nowait(payload)
+
 
 @router.get("/stream")
 async def stream(request: Request):
