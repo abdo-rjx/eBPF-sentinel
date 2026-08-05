@@ -580,6 +580,31 @@ wolf on ordinary noise. The empirical history: the model was once retrained on a
 which produced a ~60% false-positive rate; retraining on a *clean* baseline
 with tuned contamination dropped the FP rate to ~2%.
 
+The current `baseline.csv` is **real host traffic, not synthetic** — regenerated
+on 2026-08-05 by exporting 2,954 recent windows from the live SQLite DB on the
+Fedora host (simulator bursts filtered out). That cut the flagged-anomalous rate
+on live traffic from **~55% back to ~2%**. The failure it fixed: the previous
+baseline was a 500-row synthetic set (avg ~5 file-opens / ~10 syscalls/s per
+window), so *every* real window looked like an extreme outlier to the forest.
+The baseline must reflect *this machine's* normal, or the model cries wolf.
+
+Regenerating the baseline from the live DB (how it was done — rerun whenever the
+host workload changes; then retrain + restart the backend, the model loads once):
+
+```python
+import sqlite3, pandas as pd
+FEATURES = ["num_execve","num_distinct_children","num_file_opens","num_file_renames",
+            "num_file_deletes","num_distinct_files_touched","num_connect",
+            "num_distinct_dest_ips","num_setuid","syscall_rate"]
+df = pd.read_sql("SELECT * FROM windows ORDER BY id DESC LIMIT 3000",
+                 sqlite3.connect("sentinel.db"))
+# drop simulator signatures so the baseline is "normal on THIS host"
+sim = ((df.num_file_renames >= 10) | (df.num_file_deletes >= 20)
+       | ((df.num_connect >= 20) & (df.num_distinct_dest_ips <= 2)))
+df[~sim][FEATURES].to_csv("baseline.csv", index=False)
+# then: python -m sentinel_backend.ml.train baseline.csv
+```
+
 #### 7.4.3 Inference — scoring one window
 
 `AnomalyScorer.score(vector)`:
@@ -954,6 +979,21 @@ The teacher/CTO review flagged four issues; all four were fixed and verified:
 - **Retention no-op regression:** `retention.py` compared `time.monotonic()` vs
   epoch `window_end_ns` → would never prune. Aligned to `time.time()` (epoch).
 
+**Post-review follow-up (2026-08-05):**
+- **55% CRITICAL false-positive rate on the live host.** Root cause: `baseline.csv`
+  was a 500-row *synthetic* set (avg ~5 file-opens / ~10 syscalls/s), while the
+  real Fedora host averages ~83 file-opens / ~5,500 syscalls/s per window — every
+  real process was an outlier to the forest, and `severity.ts` maps any
+  `is_anomalous` to CRITICAL. Fixed by regenerating the baseline from 2,954 real
+  host windows (sim bursts excluded) and retraining → ~2% FP
+  ([§7.4.2](#742-training--offline-on-a-baseline)).
+- **Backend 500s every authed request (runtime gotcha, not a code bug).**
+  `auth.py` fails *closed* when `API_AUTH_TOKEN` is unset (raises → 500), and
+  `config.py` does **not** auto-load `.env`. A backend started from a shell without
+  the token exported serves `/health` fine but 500s all real routes — the dashboard
+  then shows "No scored windows yet" despite the DB filling up. Start uvicorn with
+  the token exported ([§12](#12-running-the-system-end-to-end)).
+
 ---
 
 ## 12. Running the system end-to-end
@@ -980,6 +1020,16 @@ python test/simulate_beaconing.py
 curl -H "Authorization: Bearer $API_AUTH_TOKEN" \
      "http://localhost:8000/api/v1/windows?anomalous_only=1&limit=20"
 ```
+
+> **Gotchas:**
+> - `config.py` does **not** auto-load `.env`. If `API_AUTH_TOKEN` isn't exported
+>   in the shell that starts uvicorn, every authed route 500s (fail-closed) while
+>   `/health` stays green — the dashboard looks empty for no obvious reason.
+> - The backend auto-reconnects to the collector socket every 2s, so restarting
+>   the collector does **not** require a backend restart (and vice-versa).
+> - The collector runs as root in the foreground and dies if its terminal closes.
+>   To run it detached:
+>   `sudo sh -c 'nohup ./build/sentinel_collector > /tmp/sentinel_collector.log 2>&1 &'`
 
 Offline verification (no root needed):
 
