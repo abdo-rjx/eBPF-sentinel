@@ -22,6 +22,7 @@ A host-based intrusion detection system (HIDS) that watches processes inside the
 
 - [Why eBPF Sentinel?](#-why-ebpf-sentinel)
 - [System Architecture](#-system-architecture)
+- [Project Diagrams](#-project-diagrams)
 - [How Detection Works](#-how-detection-works)
 - [Threat Detection Capabilities](#-threat-detection-capabilities)
 - [Repository Structure](#-repository-structure)
@@ -130,6 +131,15 @@ sequenceDiagram
     UI->>UI: render live row
 ```
 
+### 📊 Project Diagrams
+
+Printable PDF versions of the architecture live in `docs/diagrams/` — handy for presentations, thesis, or offline reading. They cover the same ground as the Mermaid diagrams above, plus detail the Mermaid can't express.
+
+| Diagram | What it shows |
+|---|---|
+| [📄 eBPF pipeline — full system](docs/diagrams/ebpf-pipeline-diagram.pdf) | All four tiers end to end: kernel eBPF (tracepoint → BPF ring buffer) → C collector (200ms poll, clock offset, NDJSON) → Python backend (windowing → feature vector → Isolation Forest → detection policy → SQLite → SSE) → React dashboard, including the on-demand explainability flow |
+| [📄 AI component — Isolation Forest](docs/diagrams/ebpf-ai-diagram.pdf) | How the machine learning actually works: the offline training phase (fit on `baseline.csv` → `isolation_forest.joblib`), the live per-window inference loop (path-length averaging → `anomaly_score` / `predict`), hand-off to the non-AI policy layer, and why the model has blind spots (10 aggregate counts, no notion of time pattern or identity) |
+
 ---
 
 ## 🧠 How Detection Works
@@ -214,6 +224,9 @@ sentinel/
 │       ├── hooks/                 # SSE consumer (with demo mode)
 │       ├── lib/                   # config, severity mapping, formatters
 │       └── pages/                 # Dashboard, Threats, How It Works, About
+├── docs/diagrams/                 # Printable architecture PDFs
+│   ├── ebpf-pipeline-diagram.pdf  # Full 4-tier pipeline
+│   └── ebpf-ai-diagram.pdf        # Isolation Forest training + inference
 └── test/                          # Safe attack simulators + offline verification
     ├── simulate_ransomware.py
     ├── simulate_beaconing.py
